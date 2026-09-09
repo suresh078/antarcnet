@@ -69,37 +69,45 @@ function maybeRaiseAlert(stationId, metric, value) {
 
 // ---------- Digital twin: forward projection against the resupply calendar ----------
 
-// Computes a simple linear consumption rate (units/hour) from recent history and
-// projects when a resource will cross its critical threshold. This is deliberately
-// simple math (linear fit over recent readings), not a black box — the point of a
-// digital twin is that the projection is inspectable, not that it's ML-driven.
+// Computes a consumption rate (units/hour) from recent history using linear regression
+// over every point in the window — not just two endpoints — so noise doesn't create a
+// false trend. Projects when a resource will cross its critical threshold. This is
+// deliberately simple, inspectable math, not a black-box model.
 function projectResource(stationId, metric) {
-  // Look back over a real 2-hour window rather than a fixed row count — this keeps the
-  // projection stable over a long-running demo instead of degrading as fast 4s sensor
-  // ticks eventually crowd out the wider seed history.
-  const windowStart = Date.now() - 2 * 60 * 60 * 1000;
+  // 14 days matches real Antarctic resource-planning timescales — a genuine depletion
+  // trend needs a window this wide to be distinguishable from ordinary day-to-day noise.
+  const windowStart = Date.now() - 14 * 24 * 60 * 60 * 1000;
   const rows = db.prepare(
     'SELECT value, recorded_at FROM sensor_readings WHERE station_id = ? AND metric = ? AND recorded_at > ? ORDER BY recorded_at ASC'
   ).all(stationId, metric, windowStart);
-  if (rows.length < 4) return null;
+  if (rows.length < 8) return null;
 
-  const oldest = rows[0];
-  const newest = rows[rows.length - 1];
-  const hoursSpan = (newest.recorded_at - oldest.recorded_at) / (1000 * 60 * 60);
-  if (hoursSpan < 0.25) return null; // need at least 15 minutes of real span to trust a rate
+  const hoursSpan = (rows[rows.length - 1].recorded_at - rows[0].recorded_at) / (1000 * 60 * 60);
+  if (hoursSpan < 24) return null; // need at least a day of real span to trust a rate
 
-  const ratePerHour = (newest.value - oldest.value) / hoursSpan; // negative = depleting
+  // Least-squares linear regression: rate = slope of value vs. time (converted to per-hour)
+  const n = rows.length;
+  const t0 = rows[0].recorded_at;
+  let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+  for (const r of rows) {
+    const x = (r.recorded_at - t0) / (1000 * 60 * 60); // hours since window start
+    const y = r.value;
+    sumX += x; sumY += y; sumXY += x * y; sumXX += x * x;
+  }
+  const denom = n * sumXX - sumX * sumX;
+  const ratePerHour = denom !== 0 ? (n * sumXY - sumX * sumY) / denom : 0; // negative = depleting
+  const currentValue = rows[rows.length - 1].value;
   const critical = METRIC_LIMITS[metric].critical;
 
   let daysUntilCritical = null;
-  if (ratePerHour < -0.0001) {
-    const hoursUntilCritical = (newest.value - critical) / -ratePerHour;
+  if (ratePerHour < -0.0005) {
+    const hoursUntilCritical = (currentValue - critical) / -ratePerHour;
     daysUntilCritical = Math.max(0, hoursUntilCritical / 24);
   }
 
   return {
     metric,
-    currentValue: newest.value,
+    currentValue,
     ratePerHour: Math.round(ratePerHour * 1000) / 1000,
     daysUntilCritical,
   };
@@ -143,6 +151,13 @@ function checkTwinProjections(stationId) {
   }
 }
 
+// Same profile assignment as the seed data (db.js) — kept in sync so live ticks don't
+// contradict the trend the twin was designed to demonstrate.
+const CONSUMPTION_PROFILE = {
+  maitri:  { fuel: 'flat', food: 'flat' },
+  bharati: { fuel: 'depleting', food: 'flat' },
+};
+
 setInterval(() => {
   const satelliteUp = getLinkStatus();
   const now = Date.now();
@@ -156,9 +171,15 @@ setInterval(() => {
         // generator-supplied: fluctuates but reverts toward its base level, doesn't trend to zero
         const base = BASE_VALUES[stationId].power;
         drift = (base - v) * 0.03 + (Math.random() - 0.5) * 1.4;
+      } else if (CONSUMPTION_PROFILE[stationId][metric] === 'depleting') {
+        // Deliberate demo scenario: a real, slow net drain (~2%/day, matching the seed
+        // history) — small per-tick, but consistent, so it doesn't contradict the trend
+        // the twin already established over the seeded 14-day history.
+        drift = -0.083 / 900 + (Math.random() - 0.5) * 0.3; // ~2%/day spread across 900 ticks/hour
       } else {
-        // fuel/food: real consumable stock, net negative drift (this is what the twin projects against)
-        drift = (Math.random() - 0.58) * 0.9;
+        // flat/stable: well-managed resource, fluctuates around its level, no real depletion
+        const base = BASE_VALUES[stationId][metric];
+        drift = (base - v) * 0.02 + (Math.random() - 0.5) * 1.0;
       }
       v = Math.round((v + drift) * 10) / 10;
       if (metric !== 'temp') v = Math.max(2, Math.min(100, v));
