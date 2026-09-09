@@ -1,0 +1,19 @@
+{
+  "name": "antarcnet",
+  "version": "1.0.0",
+  "description": "AntarcNet — SIH26060 prototype dashboard",
+  "main": "server.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.1"
+  }
+}

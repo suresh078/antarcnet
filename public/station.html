@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AntarcNet — Station Detail</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <a href="index.html" class="back-link" title="Back to dashboard">← Back</a>
+    <div class="brand-text">
+      <span class="brand-title" id="stationTitle">Loading…</span>
+      <span class="brand-sub">Station Detail · AntarcNet</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="station-status" id="stationStatusBadge">—</span>
+  </div>
+</header>
+
+<main class="station-page">
+
+  <!-- Hero banner -->
+  <section class="station-hero">
+  <img class="station-hero-photo" id="stationHeroImg" src="" alt="" />
+  </section>
+
+  <div class="station-content">
+
+    <!-- Live flow -->
+    <section class="flow-section">
+      <h2 class="section-title">Live Data Flow</h2>
+      <div class="flow-track" id="flowTrack">
+        <!-- flow nodes injected by station.js -->
+      </div>
+    </section>
+
+    <!-- Metrics -->
+    <section class="detail-metrics">
+      <h2 class="section-title">Metrics</h2>
+      <div class="detail-metric-grid" id="detailMetrics"></div>
+    </section>
+
+    <!-- Twin outlook -->
+    <section class="detail-twin">
+      <h2 class="section-title">Digital Twin — Resupply Outlook</h2>
+      <div id="detailTwin"></div>
+    </section>
+
+    <div class="detail-columns">
+      <section class="detail-roster">
+        <h2 class="section-title">Crew</h2>
+        <div id="detailRoster"></div>
+      </section>
+
+      <section class="detail-alerts">
+        <h2 class="section-title">Recent Alerts</h2>
+        <div id="detailAlerts"></div>
+      </section>
+    </div>
+
+    <button class="modal-action-btn" id="complianceBtnPage">Generate Compliance Report</button>
+  </div>
+</main>
+
+<!-- Modal reused for the compliance report -->
+<div class="modal-overlay" id="modalOverlay" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="modalTitle">Details</h3>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script src="station.js"></script>
+</body>
+</html>

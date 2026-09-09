@@ -1,0 +1,4 @@
+node_modules/
+antarcnet.db
+antarcnet.db-*
+*.log

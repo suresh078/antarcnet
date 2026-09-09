@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AntarcNet — Digital Twin & Smart Automation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">◆</span>
+    <div class="brand-text">
+      <span class="brand-title">ANTARCNET</span>
+      <span class="brand-sub">Digital Twin & Smart Automation · MoES/NCPOR · Polar Pioneers</span>
+    </div>
+  </div>
+
+  <div class="topbar-right">
+    <button class="icon-btn" id="tourBtn" title="Guided tour">❔ Tour</button>
+    <button class="icon-btn" id="aboutBtn" title="About this project">ⓘ About</button>
+    <div class="mission-clock" id="missionClock">--:--:-- IST</div>
+    <button class="link-pill" id="linkToggle" title="Simulate satellite link for demo purposes" data-tour="link">
+      <span class="link-dot" id="linkDot"></span>
+      <span id="linkLabel">SATELLITE LINK: UP</span>
+    </button>
+    <button class="icon-btn small" id="syncHistoryBtn" title="View sync history">History</button>
+  </div>
+</header>
+
+<div class="queue-banner" id="queueBanner" hidden>
+  <span class="queue-banner-icon">⌁</span>
+  <span id="queueBannerText">0 readings buffered at stations, waiting for satellite window</span>
+</div>
+
+<main class="grid">
+  <div class="left-col">
+    <section class="stations" id="stations" data-tour="stations">
+      <!-- station cards injected by app.js -->
+    </section>
+
+    <section class="twin-panel" id="twinPanel" data-tour="twin">
+      <div class="panel-head">
+        <h2>Digital Twin — Resupply Outlook</h2>
+        <span class="panel-hint">Projected</span>
+      </div>
+      <div id="twinList" class="twin-list"></div>
+      <p class="twin-note">
+        Fuel and food are projected forward from their current consumption rate against each
+        station's fixed resupply date — not a threshold check. When a shortfall is projected
+        before resupply, the system acts automatically (see Autonomous Actions below) instead
+        of just notifying a human.
+      </p>
+    </section>
+
+    <aside class="alerts-panel" data-tour="alerts">
+      <div class="panel-head">
+        <h2>Alert Feed</h2>
+        <span class="panel-hint">Live</span>
+      </div>
+      <div id="alertsList" class="alerts-list"></div>
+    </aside>
+  </div>
+
+  <div class="right-col">
+    <section class="actions-panel" data-tour="actions">
+      <div class="panel-head">
+        <h2>Autonomous Actions</h2>
+        <span class="panel-hint">Smart Automation</span>
+      </div>
+      <div id="actionsList" class="actions-list"></div>
+    </section>
+
+    <section class="personnel-panel" data-tour="workers">
+      <div class="panel-head clickable" id="rosterHeader">
+        <h2>Personnel Status</h2>
+        <span class="panel-hint">Live · click for roster</span>
+      </div>
+      <div id="workersList" class="workers-list"></div>
+    </section>
+  </div>
+</main>
+
+<section class="architecture-section">
+  <button class="collapsible-toggle" id="archToggle">
+    <span>▸ How the Digital Twin works</span>
+  </button>
+  <div class="architecture-body" id="archBody" hidden>
+    <div class="arch-flow">
+      <span>Station Sensors</span><span class="arch-arrow">→</span>
+      <span>Local Buffer</span><span class="arch-arrow">→</span>
+      <span>Satellite Sync Layer</span><span class="arch-arrow">→</span>
+      <span>Digital Twin Model</span><span class="arch-arrow">→</span>
+      <span>Forward Simulation</span><span class="arch-arrow">→</span>
+      <span>Autonomous Action / MoES Dashboard</span>
+    </div>
+    <p class="arch-note">
+      The twin isn't just a live display — it's a model of each station's resource state that
+      gets simulated forward against a fixed, known constraint: the resupply calendar. Antarctic
+      stations can't resupply on demand, only in scheduled windows, so a shortfall predicted
+      even weeks out is a real risk. When the projection crosses that line, the system takes a
+      conservation action automatically (reducing non-essential load) — and only escalates to a
+      human alert alongside it. That's the difference between monitoring and automation.
+    </p>
+  </div>
+</section>
+
+<section class="roadmap-section">
+  <button class="collapsible-toggle" id="roadmapToggle">
+    <span>▸ Roadmap — what's built vs. what's next</span>
+  </button>
+  <div class="roadmap-body" id="roadmapBody" hidden>
+    <div class="roadmap-col">
+      <h3>Built</h3>
+      <ul>
+        <li>Digital twin resource projection vs. resupply calendar</li>
+        <li>Autonomous conservation actions (not just alerts)</li>
+        <li>Offline buffering + auto-sync on reconnect</li>
+        <li>Personnel status tracking</li>
+        <li>Auto-compiled environmental/operational compliance reports</li>
+      </ul>
+    </div>
+    <div class="roadmap-col">
+      <h3>Next</h3>
+      <ul>
+        <li>Per-equipment asset registry (twin at component level, not just station level)</li>
+        <li>Real MQTT sensor integration</li>
+        <li>Role-based Station vs. HQ views</li>
+        <li>Mobile field view for on-site staff</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer class="footnote">
+  <div>Prototype — sensor data is simulated on the server. Offline/sync and twin-projection logic mirror the real architecture.</div>
+  <div class="version-tag">AntarcNet v0.3 Prototype · Digital Twin & Smart Automation · SIH26060 · Team Polar Pioneers</div>
+</footer>
+
+<!-- Modal overlay, reused for all detail views -->
+<div class="modal-overlay" id="modalOverlay" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="modalTitle">Details</h3>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- Guided tour overlay -->
+<div class="tour-overlay" id="tourOverlay" hidden>
+  <div class="tour-box">
+    <p id="tourText"></p>
+    <div class="tour-actions">
+      <button id="tourSkip">Skip</button>
+      <button id="tourNext">Next →</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
