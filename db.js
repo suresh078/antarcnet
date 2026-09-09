@@ -92,22 +92,49 @@ if (stationCount === 0) {
   const insertReading = db.prepare(
     'INSERT INTO sensor_readings (station_id, metric, value, recorded_at, synced_at) VALUES (?, ?, ?, ?, ?)'
   );
+
+  // Consumption profiles per station/metric, spanning a realistic 14-day history
+  // (matching real Antarctic resource-planning timescales, not an arbitrary fast number).
+  // 'flat' = well-managed resource, no real depletion trend (small noise only) -> stays SAFE.
+  // 'depleting' = a genuine, deliberately-designed consumption problem, calibrated to
+  // cross critical reserve *before* that station's resupply date -> correctly flags AT RISK.
+  // This gives the demo real contrast instead of flagging everything red all the time.
+  const PROFILES = {
+    maitri:  { power: 'stable', fuel: 'flat', food: 'flat', temp: 'stable' },
+    bharati: { power: 'stable', fuel: 'depleting', food: 'flat', temp: 'stable' },
+  };
+
   const baseValues = {
     maitri:  { power: 78, fuel: 64, temp: -28, food: 58 },
     bharati: { power: 82, fuel: 71, temp: -19, food: 66 },
   };
+
+  const SEED_DAYS = 14;
+  const POINTS = 84; // one reading every 4 hours over 14 days
+  const stepMs = (SEED_DAYS * day) / POINTS;
+
   for (const [stationId, metrics] of Object.entries(baseValues)) {
-    for (let i = 40; i >= 0; i--) {
-      const t = now - i * 5 * 60 * 1000;
-      const elapsedSteps = 40 - i; // 0 at the oldest seed point, 40 at "now"
+    for (let i = POINTS; i >= 0; i--) {
+      const t = now - i * stepMs;
+      const elapsedDays = ((POINTS - i) / POINTS) * SEED_DAYS; // 0 at the oldest point, SEED_DAYS at "now"
       for (const [metric, base] of Object.entries(metrics)) {
-        // fuel/food trend downward as we approach "now" — real depletion, not growth.
-        // Jitter is kept small relative to the consumption slope so the projection's
-        // rate calculation reads a clear trend rather than noise.
-        const consumed = (metric === 'fuel' || metric === 'food') ? (elapsedSteps * 0.2) : 0;
-        const jitterRange = metric === 'temp' ? 3 : (metric === 'fuel' || metric === 'food') ? 0.8 : 2.5;
-        const jitter = (Math.random() - 0.5) * jitterRange;
-        insertReading.run(stationId, metric, Math.round((base - consumed + jitter) * 10) / 10, t, t);
+        const profile = PROFILES[stationId][metric];
+        let value;
+        if (metric === 'temp') {
+          value = base + (Math.random() - 0.5) * 3;
+        } else if (profile === 'depleting') {
+          // Deliberately designed consumption problem: ~2%/day net drain, so it reads
+          // clearly as a real trend across the 14-day window (not noise), and projects
+          // to hit critical reserve well before this station's resupply date.
+          // Starts fuller in the past, lower as we approach "now" — real depletion.
+          const consumedByNow = 2 * elapsedDays;
+          value = (base + 22) - consumedByNow + (Math.random() - 0.5) * 1.5;
+        } else {
+          // flat/stable: normal day-to-day variation around base, no real depletion trend
+          value = base + (Math.random() - 0.5) * 4;
+        }
+        if (metric !== 'temp') value = Math.max(2, Math.min(100, value));
+        insertReading.run(stationId, metric, Math.round(value * 10) / 10, t, t);
       }
     }
   }
